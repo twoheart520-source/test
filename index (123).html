@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCAA美業實戰測驗</title>
+    
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 載入 React 與 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 載入 Babel 供瀏覽器即時編譯 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <!-- React 應用程式掛載點 -->
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- 測驗結果定義 ---
+        const RESULTS_DATA = {
+          A: { title: '隱形邊緣人 (不敢說/懶說型)', desc: '你總是把話吞回肚子裡，或者習慣默默做事。試著勇敢表達專業，讓客人看見你的價值吧！' },
+          B: { title: '沒溫度的機器人 (機關槍型)', desc: '你邏輯清晰、專業度高，但有時急於表達，忘了留點空白聽聽客人的心聲。多點溫度會更好喔！' },
+          C: { title: '業績破壞者 (亂說/地雷型)', desc: '哎呀！你常常憑直覺發言，不小心就踩到客人的地雷。跟著東明老師調整說話頻率，避開亂說陷阱！' },
+          D: { title: '靈魂操盤手 (懂說/頂級顧問型)', desc: '太神啦！你精準掌握溝通節奏，句句說進心坎裡，你就是讓客人死心踏地的頂級美容顧問！' }
+        };
+
+        // 標籤對應邏輯： 懂說->D, 亂說->C, 愛說/能說/敢說->B, 懶說/不說->A
+        const MOCK_QUESTIONS = [
+          {
+            id: 1, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人初診，坐在大廳看著 DM 眉頭深鎖。你會：',
+            options: [
+              { text: '走過去專業地介紹 DM 上的主打療程特色與機器波長。', type: 'B' },
+              { text: '熱情地分享最近哪個客人做了 DM 上的療程，效果超級好。', type: 'B' },
+              { text: '調皮地問：「姊姊看這麼久，是在幫自己挑生日禮物，還是要送好朋友的驚喜？」', type: 'D' },
+              { text: '用眼神關注，不用說出任何字句，等她主動招手發問。', type: 'A' }
+            ]
+          },
+          {
+            id: 2, section: '對外實戰篇（員工 vs 客戶）',
+            question: '（美容師主場）客人在做臉時，一直抱怨最近上班好累、臉都垮了。你會：',
+            options: [
+              { text: '「對呀姊姊，妳的蘋果肌真的掉下來了，等下一定要去找諮詢師處理！」', type: 'B' },
+              { text: '順著她的話大聊特聊工作有多辛苦，一起抱怨老闆。', type: 'B' },
+              { text: '安撫並引導：「真的辛苦了！如果有一種方法能讓妳看起來像睡飽八小時，妳會想了解嗎？」', type: 'D' },
+              { text: '加大力道幫她按摩，用行動舒緩她的疲勞。', type: 'A' }
+            ]
+          },
+          {
+            id: 3, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人指著明星照片說：「我要打成跟她一樣的下巴！」但她臉型完全不適合。你會：',
+            options: [
+              { text: '拿出解剖圖或比例尺，邏輯清晰地分析為什麼她不適合。', type: 'B' },
+              { text: '勇於表達：「姊姊，妳的骨骼條件跟她不同，打出來會很怪喔。」', type: 'B' },
+              { text: '讚美她的品味，並反問：「這下巴很美，但如果我們照著妳原本的漂亮輪廓微調，讓妳美得更有個人特色，妳覺得如何？」', type: 'D' },
+              { text: '順從客人避免衝突，心想反正她堅持，就請醫師處理。', type: 'A' }
+            ]
+          },
+          {
+            id: 4, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人對「海芙電音雙波」心動，但脫口而出：「可是這好貴，我怕我老公生氣。」你會：',
+            options: [
+              { text: '幫她計算分期付款的金額，強調一天只要少喝一杯咖啡。', type: 'B' },
+              { text: '不經思考地說：「哎呀女人要為自己投資啦，不要理老公怎麼想！」', type: 'C' },
+              { text: '「姊姊，我們變美是為了讓自己開心。如果做完之後，老公看妳的眼神充滿驚豔，妳覺得這筆投資值得嗎？」', type: 'D' },
+              { text: '默默把療程表收起來，壓抑想法不敢給她壓力。', type: 'A' }
+            ]
+          },
+          {
+            id: 5, section: '對外實戰篇（員工 vs 客戶）',
+            question: '（諮詢師主場）客人聽完手術報價後，面無表情地說：「我再考慮看看。」你會：',
+            options: [
+              { text: '再次強調我們醫師的技術與專業度。', type: 'B' },
+              { text: '劈頭介紹其他比較便宜的替代方案，試圖留住她。', type: 'B' },
+              { text: '微笑反問：「姊姊，是這個規劃超出預算，還是您對術後恢復期還有疑慮呢？」找出真正的抗拒點。', type: 'D' },
+              { text: '微笑遞上名片：「好的，您再想想，有需要隨時 LINE 我。」', type: 'A' }
+            ]
+          },
+          {
+            id: 6, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人拿出網路截圖：「別家皮秒才這個價錢耶！」你會：',
+            options: [
+              { text: '拿出原廠證明，條理分明地解釋機器波長與探頭差異。', type: 'B' },
+              { text: '「一分錢一分貨，流水線診所的品質跟我們無法比的！」', type: 'B' },
+              { text: '禮禮貌反問：「姊姊，您是希望在下個月參加婚禮前達到最好的效果，還是想針對下顎線做更精準的加強呢？」引導她思考價值。', type: 'D' },
+              { text: '直接翻出我們診所最便宜的療程給她看，用行動表達。', type: 'A' }
+            ]
+          },
+          {
+            id: 7, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人猶豫不決，問：「打完真的有效嗎？萬一沒效怎麼辦？」你會：',
+            options: [
+              { text: '拿出大量科學數據和成功案例的對比圖給她看。', type: 'B' },
+              { text: '拍胸脯保證：「絕對有效！沒效我退錢給妳！」', type: 'C' },
+              { text: '「姊姊，每個人體質不同，但我保證我們的團隊會在術前、中、後一路陪妳。妳願意給自己一個變美的機會嗎？」', type: 'D' },
+              { text: '支支吾吾，不敢給出明確的承諾。', type: 'A' }
+            ]
+          },
+          {
+            id: 8, section: '對外實戰篇（員工 vs 客戶）',
+            question: '逼單的最後一哩路，客人說：「好啦，那我回去想一下。」此時最好的回應是：',
+            options: [
+              { text: '「好喔，那這個優惠價我只能幫妳保留到今天喔。」', type: 'B' },
+              { text: '「別想了啦，今天刷卡我再多送妳一瓶精華液！」', type: 'C' },
+              { text: '看一下手錶微笑說：「今天聊得太開心了！但我待會還有預約，我們今天是先把計畫定下來，還是您想改天再約來聊？」', type: 'D' },
+              { text: '默默站起來去幫她開門送客。', type: 'A' }
+            ]
+          },
+          {
+            id: 9, section: '對外實戰篇（員工 vs 客戶）',
+            question: '遇到「預算真的很少」，但又很想改善全臉的客人，你會：',
+            options: [
+              { text: '直接請她存夠錢再來，不要浪費彼此時間。', type: 'B' },
+              { text: '一直推銷低單價但對她現況幫助不大的產品。', type: 'B' },
+              { text: '站在顧客角度，幫她規劃一個效果最好、負擔最輕的年度美學計畫，將預算花在刀口上。', type: 'D' },
+              { text: '把所有產品都打折，破壞診所行情只求成交。', type: 'C' }
+            ]
+          },
+          {
+            id: 10, section: '對外實戰篇（員工 vs 客戶）',
+            question: '遇到「愛懂裝懂」的客人，一直用錯誤的網路知識跟你爭辯。你會：',
+            options: [
+              { text: '直接指正她：「網路上的資訊很多都是錯的，妳要聽專業的。」', type: 'B' },
+              { text: '搬出醫學專有名詞，試圖在知識上壓倒她。', type: 'B' },
+              { text: '「姊姊妳做很多功課耶！不過我們的醫師在實務上發現另一種做法更適合妳的膚況，妳想聽聽看嗎？」', type: 'D' },
+              { text: '壓抑想法不想爭辯，她說什麼都點頭稱是。', type: 'A' }
+            ]
+          },
+          {
+            id: 11, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人打完肉毒一週，打電話來飆罵：「怎麼兩邊臉不對稱！」你會：',
+            options: [
+              { text: '冷靜解釋：「肉毒發揮作用需要時間，一週不對稱是正常的。」', type: 'B' },
+              { text: '不斷道歉，一直講對不起讓她更覺得是診所的錯。', type: 'B' },
+              { text: '先承接情緒：「姊姊別慌！妳現在一定很焦慮，今天下午有空嗎？我馬上安排妳回來讓醫師看一下，我陪著妳！」', type: 'D' },
+              { text: '嚇到不敢講話，直接把電話轉給店長。', type: 'A' }
+            ]
+          },
+          {
+            id: 12, section: '對外實戰篇（員工 vs 客戶）',
+            question: '熟客突然說：「我朋友介紹我去另一家做音波，比較便宜耶。」你會：',
+            options: [
+              { text: '批評對方：「那家評價很差耶，妳不怕臉被打壞喔？」', type: 'B' },
+              { text: '分析兩家機器的不同，試圖講理說服她。', type: 'B' },
+              { text: '展現大度與自信：「那家最近廣告打很兇耶！姊姊可以去體驗看看，不過如果覺得那邊的服務沒我懂妳，隨時歡迎回家找我喔！」', type: 'D' },
+              { text: '情緒勒索：「姊姊妳怎麼這樣，我平常對妳這麼好！」', type: 'C' }
+            ]
+          },
+          {
+            id: 13, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人嫌術後修復期太長，影響上班而猶豫不決。你會：',
+            options: [
+              { text: '告訴她：「愛美就是要付出代價啊。」', type: 'B' },
+              { text: '騙她說：「其實不會腫啦，隔天就可以上班。」', type: 'C' },
+              { text: '預演畫面：「前三天我們戴個漂亮的口罩，我教妳快速消腫。等下週五脫下口罩跟同事聚餐時，大家一定會驚呼妳變年輕了！」', type: 'D' },
+              { text: '不知道怎麼回答，陷入尷尬的沉默。', type: 'A' }
+            ]
+          },
+          {
+            id: 14, section: '對外實戰篇（員工 vs 客戶）',
+            question: '療程結束，客人準備離開。為了創造「超出預期的溫度」，你會：',
+            options: [
+              { text: '說聲謝謝光臨，然後趕快去接下一位客人。', type: 'B' },
+              { text: '塞給她一堆診所的宣傳單，叫她幫忙介紹客人。', type: 'B' },
+              { text: '除了叮嚀修復霜要擦，過兩天還主動傳訊息關心：「姊姊這兩天臉會不會乾？修復霜記得要擦喔！」', type: 'D' },
+              { text: '覺得錢已經收到了，任務結束。', type: 'A' }
+            ]
+          },
+          {
+            id: 15, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人帶著閨蜜來諮詢，但閨蜜一直在旁邊潑冷水：「這不用做啦浪費錢」。你會：',
+            options: [
+              { text: '請閨蜜不要插嘴，強調這是客人自己的決定。', type: 'B' },
+              { text: '拿出數據跟閨蜜辯論，試圖說服她這個療程很有價值。', type: 'B' },
+              { text: '把閨蜜拉進來：「妳朋友真的很關心妳耶！既然來了，閨蜜也順便幫我填個資料，等下我一起幫妳們看皮膚狀況！」', type: 'D' },
+              { text: '覺得氣氛很僵，任由閨蜜把客人帶走。', type: 'A' }
+            ]
+          },
+          {
+            id: 16, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人提出不切實際的期望：「我做完這個可以看起來像 18 歲嗎？」你會：',
+            options: [
+              { text: '為了成交，毫不猶豫地答應：「絕對可以，包在我身上！」', type: 'C' },
+              { text: '嚴肅地解釋人體老化的不可逆性，打破她的幻想。', type: 'B' },
+              { text: '微笑同理：「我們雖然沒辦法搭時光機回 18 歲，但我能幫妳做到同年齡層裡面，看起來最精緻、最亮眼的那個！」', type: 'D' },
+              { text: '直言不諱：「姊姊，妳要求太高了，沒有哪家診所做得到。」', type: 'B' }
+            ]
+          },
+          {
+            id: 17, section: '對外實戰篇（員工 vs 客戶）',
+            question: '在施打雷射過程中，客人一直喊痛、想放棄。你會：',
+            options: [
+              { text: '專業解釋：「因為這個波長比較深，有痛感是正常的。」', type: 'B' },
+              { text: '什麼都不說，直接請醫師把能量調低敷衍過去。', type: 'A' },
+              { text: '輕拍安撫：「姊姊妳超棒的！為了變美我們深呼吸忍耐一下下，馬上就好了喔！」給予情緒支持。', type: 'D' },
+              { text: '當作沒聽到，催促醫師趕快打完。', type: 'A' }
+            ]
+          },
+          {
+            id: 18, section: '對外實戰篇（員工 vs 客戶）',
+            question: '客人詢問某台網路上很紅的儀器，但診所目前沒有。你會：',
+            options: [
+              { text: '批評那台機器效果不好、風險很高，叫她不要做。', type: 'B' },
+              { text: '避重就輕，狂推銷診所內另一台毫不相干的機器。', type: 'B' },
+              { text: '肯定她：「姊姊很懂耶！那台確實在網路上討論度很高。不過我們院長評估過後，引進了另一台更適合亞洲人膚質的設備，想聽聽看差異嗎？」', type: 'D' },
+              { text: '鉅細靡遺地比較兩台機器的原廠規格表。', type: 'B' }
+            ]
+          },
+          {
+            id: 19, section: '對外實戰篇（員工 vs 客戶）',
+            question: '加了客人 LINE 之後，對方總是不讀不回或已讀不回。你會：',
+            options: [
+              { text: '每天狂傳診所的優惠活動和長輩圖問候。', type: 'B' },
+              { text: '傳送超長篇幅的美業/健康衛教文章給她。', type: 'B' },
+              { text: '傳送簡短實用的生活保養小秘訣，不提銷售，保持沒有壓力的溫度，靜待時機。', type: 'D' },
+              { text: '覺得對方沒救了，直接放生不再聯絡。', type: 'A' }
+            ]
+          },
+          {
+            id: 20, section: '對外實戰篇（員工 vs 客戶）',
+            question: '身為美業從業人員，你認為「行銷的最終標的」是什麼？',
+            options: [
+              { text: '運用邏輯把診所最高單價的療程賣出去。', type: 'B' },
+              { text: '挑戰權威，讓客人買了超出她原本預算的療程。', type: 'B' },
+              { text: '行銷的標的是「你這個人」，當客戶信任你，就算世界變了，她認的依然是你臉上的光。', type: 'D' },
+              { text: '業績達標拿獎金就好，其他不重要。', type: 'A' }
+            ]
+          },
+          // 第二部分：對內神助攻篇
+          {
+            id: 21, section: '對內神助攻篇（跨部門的共事默契）',
+            question: '（美容師主場）做身體課程時，發現客人腹部脂肪較厚，適合做抽脂手術。你會怎麼轉介給諮詢師？',
+            options: [
+              { text: '直接把諮詢師叫進來：「她肚子有點肉，妳跟她介紹一下抽脂。」', type: 'B' },
+              { text: '不斷暗示客人肚子變大了，讓她自己產生危機感。', type: 'C' },
+              { text: '閒聊中提到：「姊姊妳四肢好瘦，如果搭個局部精雕，穿衣服一定超好看！我們有位諮詢師這方面超專業，請她來跟妳聊聊好嗎？」', type: 'D' },
+              { text: '覺得推推銷手術太麻煩，還是專心做身體就好。', type: 'A' }
+            ]
+          },
+          {
+            id: 22, section: '對內神助攻篇（跨部門的共事默契）',
+            question: '諮詢師在跟大客談隆乳，美容師端茶進去。這時美容師最好的舉動是：',
+            options: [
+              { text: '熱情加入話題，大聊自己聽過的其他隆乳案例。', type: 'B' },
+              { text: '在旁邊補充說明診所現在有什麼優惠活動。', type: 'B' },
+              { text: '微笑送上溫茶，只透過眼神給客人一個肯定與安心的微笑，然後優雅退場。', type: 'D' },
+              { text: '面無表情地放下茶杯，迅速離開以免打擾。', type: 'A' }
+            ]
+          },
+          {
+            id: 23, section: '對內神助攻篇（跨部門的共事默契）',
+            question: '（諮詢師主場）客人做完大手術，接下來需要回診讓美容師做術後修復。交接時你會：',
+            options: [
+              { text: '在群組裡發一句「某某客人下週要做修復」，有邏輯地交代完畢。', type: 'B' },
+              { text: '跟客人說：「術後有問題妳直接找美容師喔，她們會處理。」', type: 'A' },
+              { text: '親自帶著客人介紹給美容師：「姊姊，這是我們最細心的美容師，接下來的修復交給她，我會跟她一起關注您的狀況。」', type: 'D' },
+              { text: '覺得手術已經結案，不願表達後續關心。', type: 'A' }
+            ]
+          },
+          {
+            id: 24, section: '對內神助攻篇（跨部門的共事默契）',
+            question: '客人私下跟美容師抱怨：「剛剛那個諮詢師推銷感太重，我不喜歡。」美容師該如何回應？',
+            options: [
+              { text: '替同事辯護：「她不是推銷啦，她只是講話比較急。」', type: 'B' },
+              { text: '衝動發言：「對啊，她有時候就是這樣，妳別介意。」', type: 'C' },
+              { text: '同理並緩頰：「姊姊抱歉讓妳有這種感覺！她其實是看到妳條件太好，急著想幫妳規劃。我等下提醒她稍微踩個煞車。」', type: 'D' },
+              { text: '假裝沒聽到，避免衝突趕快轉移話題。', type: 'A' }
+            ]
+          },
+          {
+            id: 25, section: '對內神助攻篇（跨部門的共事默契）',
+            question: '諮詢師為了成交大單，大方送了幾堂「免費保濕導入」。雖然美容師有半額操作費，但發現診表被塞滿，全額付費的新客和 VIP 都約不進來。美容師該如何溝通？',
+            options: [
+              { text: '直接跑去抱怨：「妳送一堆耗時間的療程，把診表卡死了，我的 VIP 怎麼辦！」', type: 'B' },
+              { text: '拿出數據：「妳送的導入佔據我 30% 時間產值卻減半，請嚴格控管贈送比例。」', type: 'B' },
+              { text: '私下達成共識：「恭喜成交大單！不過最近導入卡到接客了，下次我們能改送『ＯＯＯ』嗎？這樣妳好逼單，我們也能接更多客！」', type: 'D' },
+              { text: '默默吞下，但幫客人做免費導入時，手法隨便只想趕快下鐘。', type: 'A' }
+            ]
+          }
+        ];
+
+        function App() {
+          const [gameState, setGameState] = useState('start');
+          const [questions, setQuestions] = useState([]); 
+          const [currentIndex, setCurrentIndex] = useState(0);
+          const [scores, setScores] = useState({ A: 0, B: 0, C: 0, D: 0 });
+          const [mainResult, setMainResult] = useState(null);
+          
+          // --- 擴充表單欄位狀態 ---
+          const [userName, setUserName] = useState('');
+          const [gender, setGender] = useState('');
+          const [age, setAge] = useState('');
+          const [industry, setIndustry] = useState('');
+          const [jobTitle, setJobTitle] = useState('');
+          const [formError, setFormError] = useState(false);
+
+          const startQuiz = () => {
+            // 嚴格驗證所有欄位必填
+            if (!userName.trim() || !gender || !age || !industry.trim() || !jobTitle.trim()) {
+              setFormError(true);
+              return;
+            }
+
+            // 將每題的選項順序打亂，維持 1~25 的題號順序
+            const randomizedQuestions = MOCK_QUESTIONS.map(q => ({
+              ...q,
+              options: [...q.options].sort(() => Math.random() - 0.5)
+            }));
+
+            setQuestions(randomizedQuestions); 
+            setGameState('quiz');
+          };
+
+          const handleAnswer = (type) => {
+            const newScores = { ...scores, [type]: scores[type] + 1 };
+            setScores(newScores);
+
+            if (currentIndex < questions.length - 1) {
+              setCurrentIndex(currentIndex + 1);
+            } else {
+              calculateResult(newScores);
+            }
+          };
+
+          const calculateResult = (finalScores) => {
+            let maxScore = -1;
+            let maxType = 'A';
+            
+            for (const type in finalScores) {
+              if (finalScores[type] > maxScore) {
+                maxScore = finalScores[type];
+                maxType = type;
+              }
+            }
+            setMainResult(maxType);
+            setGameState('result');
+            
+            sendDataToGAS(maxType, finalScores);
+          };
+
+          const sendDataToGAS = (type, finalScores) => {
+            // 請替換成您在 Google Sheets 上重新「部署」後產生的全新網頁應用程式網址 (Web App URL)
+            const gasUrl = 'https://script.google.com/macros/s/AKfycbxom8WTfI28nU9AI4kZSIlaqTe6UFEkknsc-U7GIKPBsgqQshdSw4syymv00y3zvHXl/exec';
+            
+            const resultTitle = RESULTS_DATA[type].title;
+            const details = `懂說(D):${finalScores.D} | 機關槍(B):${finalScores.B} | 亂說(C):${finalScores.C} | 不敢說(A):${finalScores.A}`;
+
+            // 將所有新擴充的學員特徵打包發送
+            const formData = new URLSearchParams();
+            formData.append('name', userName);
+            formData.append('gender', gender);
+            formData.append('age', age);
+            formData.append('industry', industry);
+            formData.append('title', jobTitle);
+            formData.append('score', resultTitle); 
+            formData.append('details', details);
+
+            fetch(gasUrl, {
+              method: 'POST',
+              body: formData,
+              mode: 'no-cors'
+            }).then(() => {
+              console.log('🚀 完整的精準學員資料已成功發射到 Google Sheets！');
+            }).catch(err => {
+              console.error('❌ 資料傳送失敗', err);
+            });
+          };
+
+          if (gameState === 'start') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-[#FDF8F5] via-[#FFFDF9] to-[#F0F7F4] flex flex-col items-center justify-center p-4 font-sans text-slate-800">
+                <div className="bg-white/90 backdrop-blur-md border border-[#F0EBE1] rounded-[2rem] shadow-xl p-8 sm:p-10 max-w-xl w-full text-center relative overflow-hidden my-8">
+                  <div className="absolute -top-12 -right-12 w-40 h-40 bg-orange-100 rounded-full blur-3xl opacity-50"></div>
+                  <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-emerald-100 rounded-full blur-3xl opacity-50"></div>
+
+                  <div className="relative z-10">
+                    <div className="inline-block px-5 py-1.5 bg-emerald-50 text-emerald-600 font-bold rounded-full text-sm mb-6 border border-emerald-100 shadow-sm">
+                      課前精準戰力分析
+                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 mb-6 leading-tight tracking-tight">
+                      ＴＣＡＡ美業實戰測驗：<br/>
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-400">你是沒溫度的機器人，<br/>還是靈魂操盤手？</span>
+                    </h1>
+                    
+                    <p className="text-slate-600 mb-8 leading-relaxed font-medium text-left">
+                      哈囉！業績卡關了嗎？或許你不是不會賣，而是用錯了溝通的頻率！<br/><br/>
+                      這份測驗精選了 <span className="font-bold text-orange-500">25 個美業第一線最真實的情境</span>。填寫下方您的個人資訊後，即可開始定位您的說話能力。跟著東明老師，一起避開亂說陷阱，成為看穿客人內心的頂級顧問吧！
+                    </p>
+
+                    {/* --- 新增擴充表單資料區 --- */}
+                    <div className="space-y-4 mb-8 text-left max-w-md mx-auto">
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1.5 text-sm">1. 姓名 / 暱稱：</label>
+                        <input 
+                          type="text" 
+                          value={userName}
+                          onChange={(e) => { setUserName(e.target.value); setFormError(false); }}
+                          className="w-full px-4 py-3 border-2 border-[#F0EBE1] rounded-xl focus:outline-none focus:border-orange-400 bg-white shadow-sm transition-all text-base"
+                          placeholder="例如：東明老師、Celine..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-700 font-bold mb-1.5 text-sm">2. 性別：</label>
+                          <select 
+                            value={gender} 
+                            onChange={(e) => { setGender(e.target.value); setFormError(false); }}
+                            className="w-full px-4 py-3 border-2 border-[#F0EBE1] rounded-xl focus:outline-none focus:border-orange-400 bg-white shadow-sm transition-all text-base appearance-none"
+                          >
+                            <option value="">請選擇</option>
+                            <option value="女性">女性</option>
+                            <option value="男性">男性</option>
+                            <option value="多元/保留">不便透露</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-700 font-bold mb-1.5 text-sm">3. 年齡層：</label>
+                          <select 
+                            value={age} 
+                            onChange={(e) => { setAge(e.target.value); setFormError(false); }}
+                            className="w-full px-4 py-3 border-2 border-[#F0EBE1] rounded-xl focus:outline-none focus:border-orange-400 bg-white shadow-sm transition-all text-base appearance-none"
+                          >
+                            <option value="">請選擇</option>
+                            <option value="25歲以下">25 歲以下</option>
+                            <option value="26-35歲">26-35 歲</option>
+                            <option value="36-45歲">36-45 歲</option>
+                            <option value="46-55歲">46-55 歲</option>
+                            <option value="56歲以上">56 歲以上</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-700 font-bold mb-1.5 text-sm">4. 服務產業：</label>
+                          <input 
+                            type="text" 
+                            value={industry}
+                            onChange={(e) => { setIndustry(e.target.value); setFormError(false); }}
+                            className="w-full px-4 py-3 border-2 border-[#F0EBE1] rounded-xl focus:outline-none focus:border-orange-400 bg-white shadow-sm transition-all text-base"
+                            placeholder="例如：美業、生技、零售..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-700 font-bold mb-1.5 text-sm">5. 目前職稱：</label>
+                          <input 
+                            type="text" 
+                            value={jobTitle}
+                            onChange={(e) => { setJobTitle(e.target.value); setFormError(false); }}
+                            className="w-full px-4 py-3 border-2 border-[#F0EBE1] rounded-xl focus:outline-none focus:border-orange-400 bg-white shadow-sm transition-all text-base"
+                            placeholder="例如：諮詢師、美容師、店長..."
+                          />
+                        </div>
+                      </div>
+
+                      {formError && (
+                        <p className="text-red-500 text-sm font-bold animate-pulse text-center mt-3">
+                          🌟 嘿！欄位還沒填寫完整喔，讓我更認識你吧！
+                        </p>
+                      )}
+                    </div>
+
+                    <button 
+                      onClick={startQuiz}
+                      className="w-full max-w-md bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white font-bold py-4 px-8 rounded-2xl transition duration-300 flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-xl active:scale-95 mx-auto"
+                    >
+                      填好了，開始挑戰實戰題！
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'quiz') {
+            const currentQuestion = questions[currentIndex];
+            const progressPercentage = ((currentIndex + 1) / questions.length) * 100;
+
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-[#FDF8F5] via-[#FFFDF9] to-[#F0F7F4] flex flex-col items-center p-4 font-sans text-slate-800">
+                <div className="w-full max-w-2xl mb-6 mt-4">
+                  <div className="flex justify-between items-center text-slate-500 font-bold mb-3 text-sm px-2">
+                    <span className="bg-white/80 px-4 py-1.5 rounded-full border border-slate-200 shadow-sm">挑戰者：{userName}</span>
+                    <span>{currentIndex + 1} / {questions.length}</span>
+                  </div>
+                  <div className="w-full bg-[#E5E0D8] h-3 rounded-full overflow-hidden shadow-inner">
+                    <div 
+                      className="bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 h-3 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] shadow-lg p-6 sm:p-10 max-w-2xl w-full border border-[#F0EBE1] relative">
+                  <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <span className="text-emerald-700 bg-emerald-50 px-4 py-1.5 rounded-full text-sm font-bold border border-emerald-100">
+                      {currentQuestion.section}
+                    </span>
+                  </div>
+                  
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-8 leading-relaxed">
+                    <span className="text-orange-500 mr-2">Q{currentIndex + 1}.</span>
+                    {currentQuestion.question}
+                  </h2>
+                  
+                  <div className="space-y-4">
+                    {currentQuestion.options.map((option, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleAnswer(option.type)}
+                        className="w-full text-left p-5 rounded-2xl border-2 border-[#F0EBE1] hover:border-orange-400 hover:bg-orange-50/50 transition-all font-medium text-slate-700 active:scale-[0.99] flex items-start group relative overflow-hidden bg-white shadow-sm hover:shadow-md"
+                      >
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-l-2xl"></div>
+                        
+                        <span className="inline-block w-8 h-8 rounded-full bg-slate-100 text-slate-500 group-hover:bg-orange-500 group-hover:text-white flex-shrink-0 text-center leading-8 mr-4 text-sm font-bold transition-colors shadow-sm">
+                          {String.fromCharCode(65 + index)}
+                        </span>
+                        <span className="mt-1 leading-relaxed text-base">{option.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'result') {
+            const resultInfo = RESULTS_DATA[mainResult];
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-[#FDF8F5] via-[#FFFDF9] to-[#F0F7F4] flex flex-col items-center justify-center p-4 font-sans text-slate-800">
+                <div className="bg-white rounded-[2rem] shadow-xl p-8 sm:p-10 max-w-lg w-full text-center border border-[#F0EBE1] relative overflow-hidden">
+                  
+                  <div className="text-orange-600 font-bold mb-3 text-lg bg-orange-50 inline-block px-6 py-2 rounded-full border border-orange-100 shadow-sm">
+                    太棒了，{userName}！測驗完成！🎉
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-slate-800 mb-4 mt-6">你的實戰溝通等級是：</h2>
+                  
+                  <div className="mb-6 py-8 bg-gradient-to-br from-orange-50 to-[#FFFDF9] rounded-3xl shadow-inner border border-orange-100/50 flex items-center justify-center">
+                    <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#F26522] to-orange-400 drop-shadow-sm">
+                      {resultInfo.title}
+                    </span>
+                  </div>
+                  
+                  <p className="text-slate-700 mb-8 leading-relaxed font-medium text-left bg-emerald-50/60 p-6 rounded-2xl border border-emerald-100/60 shadow-sm">
+                    {resultInfo.desc}
+                  </p>
+                  
+                  <div className="bg-white border-2 border-[#F0EBE1] p-6 rounded-2xl mb-8 text-sm text-slate-600 text-left shadow-sm">
+                    <p className="font-bold mb-4 text-slate-800 text-base border-b border-slate-100 pb-3 flex items-center">
+                      <span className="bg-orange-100 text-orange-600 p-1.5 rounded-lg mr-2">🎯</span> 你的潛意識溝通雷達分析：
+                    </p>
+                    <ul className="space-y-4 font-medium mt-2">
+                      <li className="flex justify-between items-center group">
+                        <span className="group-hover:text-orange-600 transition-colors">✨ 靈魂操盤手 (懂說/同理心)</span>
+                        <span className="bg-orange-100 text-orange-700 font-bold px-3 py-1 rounded-lg shadow-sm">{scores.D} 次</span>
+                      </li>
+                      <li className="flex justify-between items-center group">
+                        <span className="group-hover:text-emerald-600 transition-colors">🤖 沒溫度的機器人 (機關槍/說教)</span>
+                        <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">{scores.B} 次</span>
+                      </li>
+                      <li className="flex justify-between items-center group">
+                        <span className="group-hover:text-slate-800 transition-colors">💣 業績破壞者 (亂說/踩雷)</span>
+                        <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">{scores.C} 次</span>
+                      </li>
+                      <li className="flex justify-between items-center group">
+                        <span className="group-hover:text-slate-800 transition-colors">👻 隱形邊緣人 (不敢說/懶說)</span>
+                        <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg">{scores.A} 次</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <p className="text-emerald-600 font-medium text-xs mb-6 flex items-center justify-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                    你的戰力分析已成功同步至總部系統
+                  </p>
+
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-2xl transition duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    回首頁，再測一次
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
